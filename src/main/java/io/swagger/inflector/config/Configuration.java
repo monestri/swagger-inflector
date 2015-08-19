@@ -20,6 +20,8 @@ import io.swagger.util.Yaml;
 
 import java.io.File;
 import java.io.InputStream;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -39,33 +41,42 @@ public class Configuration {
     private String rootPath = "";
 
     public static Configuration read() {
+    	String swaggerUrl = System.getProperty("swaggerUrl", "swagger.yaml");
         String configLocation = System.getProperty("config", "inflector.yaml");
         System.out.println("loading config from " + configLocation);
+        System.out.println("loading swaggerUrl from " + swaggerUrl);
         if(configLocation != null) {
           try {
-            return read(configLocation);
-          }
-          catch (Exception e) {
+            output = read(configLocation);
+          }catch (Exception e) {
             // continue
             LOGGER.warn("couldn't read inflector config from system property");
           }
         }
-        try {
-            // try to load from resources
-            
-            InputStream is = Configuration.class.getClassLoader().getResourceAsStream("/WEB-INF/inflector.yaml");
-            if(is != null) {
-                try {
-                  return Yaml.mapper().readValue(is, Configuration.class);
-                } catch (Exception e) {
-                  LOGGER.warn("couldn't read inflector config from resource stream");
-                  // continue
-                }
-            }
-        } catch (Exception e) {
-          LOGGER.warn("Returning default configuration!");
+        
+        if (output == null){
+	        try {
+	            // try to load from resources
+	            
+	            InputStream is = Configuration.class.getClassLoader().getResourceAsStream("/WEB-INF/inflector.yaml");
+	            if(is != null) {
+	                try {
+	                  output =  Yaml.mapper().readValue(is, Configuration.class);
+	                } catch (Exception e) {
+	                  LOGGER.warn("couldn't read inflector config from resource stream");
+	                  // continue
+	                }
+	            }
+	        } catch (Exception e) {
+	          LOGGER.warn("Returning default configuration!");
+	        }
+	        
+	        if (output == null)
+	        	output = defaultConfiguration();
         }
-        return defaultConfiguration();
+        
+        output.setSwaggerUrl(swaggerUrl);
+        return output;
     }
 
     public static Configuration read(String configLocation) throws Exception {
